@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stair Climber</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(to right, #8360c3, #2ebf91); /* Softer gradient */
+            color: #fff;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+
+        #game-container {
+            position: relative;
+            background-color: #222; /* Darker background for contrast */
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 90vw; /* Responsive width */
+            margin: 20px;
+        }
+
+        canvas {
+            background-color: #1a1a1a; /* Even darker canvas background */
+            display: block;
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+            width: 100%; /* Make canvas responsive */
+            max-width: 400px; /* Max width for a vertical game */
+            height: auto; /* Maintain aspect ratio */
+            aspect-ratio: 3/4; /* Taller aspect ratio for climbing */
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 10px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+
+        .game-info span {
+            padding: 5px 10px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            outline: none;
+        }
+
+        button:hover {
+            background: linear-gradient(to right, #feb47b, #ff7e5f);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            border-radius: 15px;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message-box h2 {
+            margin: 0;
+            font-size: 2.2em;
+            color: #ffeb3b; /* Yellow for emphasis */
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .message-box p {
+            font-size: 1.3em;
+            color: #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        .message-box button {
+            margin-top: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* Mobile controls for touch */
+        #mobile-controls {
+            display: none; /* Hidden by default, shown on small screens */
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        #mobile-controls button {
+            flex: 1;
+            margin: 0 5px;
+            padding: 15px 0;
+            font-size: 1.5em;
+            background: linear-gradient(to right, #4CAF50, #8BC34A); /* Greenish buttons */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #mobile-controls button:active {
+            background: linear-gradient(to right, #8BC34A, #4CAF50);
+        }
+
+        @media (max-width: 768px) {
+            .game-info {
+                font-size: 1em;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+            .message-box {
+                padding: 20px 30px;
+            }
+            .message-box h2 {
+                font-size: 1.8em;
+            }
+            .message-box p {
+                font-size: 1.1em;
+            }
+            #mobile-controls {
+                display: flex; /* Show mobile controls on small screens */
+            }
+            .controls {
+                display: none; /* Hide desktop controls on small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="game-info">
+            <span>Score: <span id="score">0</span> / <span id="scoreGoal">0</span></span>
+            <span>Level: <span id="level">1</span></span>
+            <span>Time: <span id="timer">0</span></span>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            <button id="startButton">Start Game</button>
+            <button id="resetButton">Reset Game</button>
+        </div>
+        <div id="mobile-controls">
+            <button id="leftButton">&larr;</button>
+            <button id="jumpButton">Jump</button>
+            <button id="rightButton">&rarr;</button>
+        </div>
+
+        <div id="messageBox" class="message-box">
+            <h2 id="messageTitle"></h2>
+            <p id="messageText"></p>
+            <button id="messageButton"></button>
+        </div>
+    </div>
+
+    <script>
+        // Get the canvas element and its 2D rendering context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Get UI elements
+        const scoreDisplay = document.getElementById('score');
+        const scoreGoalDisplay = document.getElementById('scoreGoal');
+        const levelDisplay = document.getElementById('level');
+        const timerDisplay = document.getElementById('timer');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const messageBox = document.getElementById('messageBox');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const messageButton = document.getElementById('messageButton');
+
+        // Mobile controls
+        const leftButton = document.getElementById('leftButton');
+        const jumpButton = document.getElementById('jumpButton');
+        const rightButton = document.getElementById('rightButton');
+
+        // Game variables
+        let score = 0;
+        let level = 1;
+        let gameRunning = false;
+        let gameOver = false;
+        const MAX_LEVELS = 20; // Max levels for the game
+
+        let timeLimit = 60; // seconds for each level
+        let timeLeft = timeLimit;
+        let scoreGoal = 100; // points needed to clear a level
+
+        let gameInterval; // For the timer
+
+        // Character properties
+        const character = {
+            width: 20,
+            height: 30,
+            x: 0,
+            y: 0,
+            dx: 0, // Horizontal speed (no longer directly controls character X, but influences worldHorizontalMoveSpeed)
+            dy: 0, // Vertical speed
+            gravity: 0.5,
+            jumpStrength: -10,
+            onGround: false,
+            speed: 3,
+            jumpCount: 2 // For double jump
+        };
+
+        // Stair properties
+        const stair = {
+            widthMin: 60,
+            widthMax: 120,
+            height: 15,
+            spacingMin: 60, // Minimum vertical spacing between stairs
+            spacingMax: 100, // Maximum vertical spacing between stairs
+            horizontalSpeed: 0.5, // Speed at which stairs move horizontally on their own
+            count: 10 // Number of stairs visible on screen
+        };
+        let stairs = [];
+
+        // Boost properties
+        const boostSize = 15; // Size of boost icon
+
+        // Variable to control world horizontal movement based on character input
+        let worldHorizontalMoveSpeed = 0; // Positive for world moving right (character moving left), negative for world moving left (character moving right)
+
+        // Helper function to draw polygons (for boosts)
+        function drawPolygon(x, y, radius, sides, color) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius * Math.cos(0), y + radius * Math.sin(0));
+            for (let i = 1; i <= sides; i++) {
+                ctx.lineTo(x + radius * Math.cos(i * 2 * Math.PI / sides), y + radius * Math.sin(i * 2 * Math.PI / sides));
+            }
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Main drawing function
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            drawStairs();
+            drawBoosts(); // Draw boosts
+            drawCharacter();
+        }
+
+        // Function to set canvas dimensions responsively
+        function setCanvasDimensions() {
+            const container = document.getElementById('game-container');
+            const containerWidth = container.clientWidth - 40; // Subtract padding
+            canvas.width = Math.min(containerWidth, 400); // Max width 400px
+            canvas.height = canvas.width * (4 / 3); // Maintain 3:4 aspect ratio (taller)
+            // No need to call resetGameElementsPosition here, it's called by resetGame
+            // generateInitialStairs(); // Called by resetGameElementsPosition
+        }
+
+        // Initialize game elements positions
+        function resetGameElementsPosition() {
+            score = 0;
+            level = 1;
+            timeLimit = 60; // Reset time limit for new game
+            timeLeft = timeLimit;
+            scoreGoal = 100; // Reset score goal for new game
+
+            scoreDisplay.textContent = score;
+            scoreGoalDisplay.textContent = scoreGoal;
+            levelDisplay.textContent = level;
+            timerDisplay.textContent = timeLeft;
+
+            character.dy = 0;
+            character.onGround = false;
+            character.jumpCount = 2; // Reset jump count
+
+            stairs = []; // Clear stairs
+            gameOver = false;
+            gameRunning = false;
+
+            worldHorizontalMoveSpeed = 0; // Reset character's input-based world movement
+
+            generateInitialStairs();
+            // Place character on the first stair, which is the bottom-most one, already centered.
+            const firstStair = stairs[stairs.length - 1]; // The bottom-most stair
+
+            // Character's X is fixed at the center of the canvas
+            character.x = canvas.width / 2 - character.width / 2;
+            character.y = firstStair.y - character.height;
+
+            console.log('Resetting game elements: Character initial position:', character.x, character.y);
+        }
+
+        // Generate initial stairs
+        function generateInitialStairs() {
+            stairs = [];
+            let currentY = canvas.height - 50; // Start generating from near the bottom
+            for (let i = 0; i < stair.count; i++) {
+                let width = Math.random() * (stair.widthMax - stair.widthMin) + stair.widthMin; // Changed to 'let'
+                let x = Math.random() * (canvas.width - width);
+                const direction = Math.random() < 0.5 ? 1 : -1; // 1 for right, -1 for left
+
+                // Explicitly center the very first stair (bottom-most)
+                if (i === stair.count - 1) {
+                    x = canvas.width / 2 - width / 2;
+                    // Ensure the bottom-most stair is wide enough for the character
+                    width = Math.max(width, character.width * 2);
+                }
+
+                stairs.push({
+                    x: x,
+                    y: currentY,
+                    width: width,
+                    height: stair.height,
+                    color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                    dx: stair.horizontalSpeed * direction, // Horizontal movement speed for this stair
+                    boost: null // No boost by default
+                });
+                currentY -= Math.random() * (stair.spacingMax - stair.spacingMin) + stair.spacingMin;
+            }
+        }
+
+        // Generate a new stair at the top
+        function generateNewStair() {
+            const lastStair = stairs[0]; // The topmost stair
+            const width = Math.random() * (stair.widthMax - stair.widthMin) + stair.widthMin;
+            const x = Math.random() * (canvas.width - width);
+            const y = lastStair.y - (Math.random() * (stair.spacingMax - stair.spacingMin) + stair.spacingMin);
+            const direction = Math.random() < 0.5 ? 1 : -1;
+
+            const newStair = {
+                x: x,
+                y: y,
+                width: width,
+                height: stair.height,
+                color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                dx: stair.horizontalSpeed * direction,
+                boost: null
+            };
+
+            // Randomly add a boost to the new stair
+            if (Math.random() < 0.25) { // 25% chance to add a boost
+                const boostTypes = [
+                    { type: 'points_add', shape: 'square', color: '#FFD700' },        // Gold Square
+                    { type: 'points_deduct', shape: 'diamond', color: '#607D8B' },    // Dark Gray Diamond
+                    { type: 'timer_add', shape: 'hexagon', color: '#00BCD4' },        // Cyan Hexagon
+                    { type: 'timer_deduct', shape: 'pentagon', color: '#FF5722' }     // Dark Orange Pentagon
+                ];
+
+                const chosenBoost = boostTypes[Math.floor(Math.random() * boostTypes.length)];
+                newStair.boost = {
+                    type: chosenBoost.type,
+                    shape: chosenBoost.shape,
+                    color: chosenBoost.color
+                };
+            }
+
+            stairs.unshift(newStair); // Add to the beginning of the array
+            // Remove the oldest stair if we have too many
+            if (stairs.length > stair.count + 2) { // Keep a few extra for smooth scrolling
+                stairs.pop();
+            }
+        }
+
+        // Draw character
+        function drawCharacter() {
+            ctx.beginPath();
+            ctx.rect(character.x, character.y, character.width, character.height);
+            ctx.fillStyle = '#FF5722'; // Orange character
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Draw stairs
+        function drawStairs() {
+            stairs.forEach(s => {
+                ctx.beginPath();
+                ctx.roundRect(s.x, s.y, s.width, s.height, 5); // Rounded corners for stairs
+                ctx.fillStyle = s.color;
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+
+        // Draw boosts
+        function drawBoosts() {
+            stairs.forEach(s => {
+                if (s.boost) {
+                    const boostX = s.x + s.width / 2;
+                    const boostY = s.y - boostSize; // Position above the stair
+
+                    ctx.beginPath();
+                    ctx.fillStyle = s.boost.color;
+
+                    switch (s.boost.shape) {
+                        case 'circle':
+                            ctx.arc(boostX, boostY, boostSize / 2, 0, Math.PI * 2);
+                            break;
+                        case 'triangle_up':
+                            ctx.moveTo(boostX, boostY - boostSize / 2);
+                            ctx.lineTo(boostX - boostSize / 2, boostY + boostSize / 2);
+                            ctx.lineTo(boostX + boostSize / 2, boostY + boostSize / 2);
+                            ctx.closePath();
+                            break;
+                        case 'triangle_down':
+                            ctx.moveTo(boostX, boostY + boostSize / 2);
+                            ctx.lineTo(boostX - boostSize / 2, boostY - boostSize / 2);
+                            ctx.lineTo(boostX + boostSize / 2, boostY - boostSize / 2);
+                            ctx.closePath();
+                            break;
+                        case 'square':
+                            ctx.rect(boostX - boostSize / 2, boostY - boostSize / 2, boostSize, boostSize);
+                            break;
+                        case 'diamond':
+                            ctx.moveTo(boostX, boostY - boostSize / 2);
+                            ctx.lineTo(boostX + boostSize / 2, boostY);
+                            ctx.lineTo(boostX, boostY + boostSize / 2);
+                            ctx.lineTo(boostX - boostSize / 2, boostY);
+                            ctx.closePath();
+                            break;
+                        case 'star': // Simple 5-point star
+                            const outerRadius = boostSize / 2;
+                            const innerRadius = boostSize / 4;
+                            const numPoints = 5;
+                            for (let i = 0; i < numPoints * 2; i++) {
+                                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                                const angle = (Math.PI / numPoints) * i;
+                                const x = boostX + radius * Math.sin(angle);
+                                const y = boostY - radius * Math.cos(angle);
+                                if (i === 0) {
+                                    ctx.moveTo(x, y);
+                                } else {
+                                    ctx.lineTo(x, y);
+                                }
+                            }
+                            ctx.closePath();
+                            break;
+                        case 'hexagon':
+                            drawPolygon(boostX, boostY, boostSize / 2, 6, s.boost.color);
+                            break;
+                        case 'pentagon':
+                            drawPolygon(boostX, boostY, boostSize / 2, 5, s.boost.color);
+                            break;
+                    }
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Update game logic
+        function update() {
+            // Apply gravity
+            character.dy += character.gravity;
+            character.y += character.dy;
+
+            // Character's X is fixed at center, world moves around it
+            character.x = canvas.width / 2 - character.width / 2;
+
+            // Move stairs horizontally based on their own speed AND character input
+            stairs.forEach(s => {
+                s.x += s.dx + worldHorizontalMoveSpeed; // Apply both auto-move and character-induced move
+
+                // Clamp stair position to keep it within screen bounds
+                if (s.x < 0) {
+                    s.x = 0;
+                    s.dx = Math.abs(s.dx); // Ensure it moves right if it hits left edge
+                } else if (s.x + s.width > canvas.width) {
+                    s.x = canvas.width - s.width;
+                    s.dx = -Math.abs(s.dx); // Ensure it moves left if it hits right edge
+                }
+            });
+
+            // Check for collision with stairs
+            let landedOnStairThisFrame = false;
+            for (let i = 0; i < stairs.length; i++) {
+                const s = stairs[i];
+                // Check if character is falling and lands on a stair
+                if (character.dy > 0 &&
+                    character.x < s.x + s.width &&
+                    character.x + character.width > s.x &&
+                    character.y + character.height > s.y &&
+                    character.y + character.height < s.y + s.height) { // Landed on top of stair
+                    character.y = s.y - character.height; // Snap to top of stair
+                    character.dy = 0; // Stop vertical movement
+                    character.onGround = true;
+                    character.jumpCount = 2; // Reset jump count on landing
+                    landedOnStairThisFrame = true;
+
+                    // Check for boost collision on this stair
+                    if (s.boost) {
+                        const boostX = s.x + s.width / 2;
+                        const boostY = s.y - boostSize; // Position above the stair
+
+                        // Simple rectangular collision check for boost
+                        if (character.x < boostX + boostSize / 2 &&
+                            character.x + character.width > boostX - boostSize / 2 &&
+                            character.y < boostY + boostSize / 2 &&
+                            character.y + character.height > boostY - boostSize / 2) {
+                            applyBoostEffect(s.boost.type);
+                            s.boost = null; // Remove collected boost from the stair
+                        }
+                    }
+                    break; // Only land on one stair per frame
+                }
+            }
+
+            // If character is not on ground after checking all stairs, it's falling
+            if (!landedOnStairThisFrame && character.dy > 0) {
+                character.onGround = false;
+            }
+
+
+            // Game Over if character falls below screen
+            if (character.y + character.height > canvas.height + 50) { // Give a little buffer
+                endGame(false, "You fell too far!");
+            }
+
+            // Scrolling logic: If character goes above a certain point, scroll the world down
+            const scrollThreshold = canvas.height * 0.4; // Scroll when character is in top 40% of screen
+            if (character.y < scrollThreshold) {
+                const scrollAmount = scrollThreshold - character.y;
+                character.y = scrollThreshold; // Keep character at threshold
+
+                // Move all stairs and their boosts down by scrollAmount
+                stairs.forEach(s => s.y += scrollAmount);
+
+                // Generate new stairs as needed
+                while (stairs[0].y > -stair.spacingMax) { // If topmost stair is still visible or just off screen
+                    generateNewStair();
+                    score += 1; // Increase score for climbing
+                    scoreDisplay.textContent = score;
+                    // Check for level up
+                    if (score >= scoreGoal && level < MAX_LEVELS) {
+                        levelUp();
+                    }
+                }
+            }
+        }
+
+        // Apply boost effect based on type
+        function applyBoostEffect(type) {
+            switch (type) {
+                case 'points_add':
+                    score += 50;
+                    break;
+                case 'points_deduct':
+                    score = Math.max(score - 25, 0); // Deduct points, min 0
+                    break;
+                case 'timer_add':
+                    timeLeft = Math.min(timeLeft + 10, timeLimit * 2); // Add 10 seconds, max double initial time
+                    break;
+                case 'timer_deduct':
+                    timeLeft = Math.max(timeLeft - 10, 0); // Deduct 10 seconds, min 0
+                    break;
+            }
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft; // Update timer display for timer boosts
+        }
+
+        // Update temporary boost timers (not directly used for this request's boost types, but kept for structure)
+        function updateBoostTimers() {
+            // No temporary boosts that need timers in this version, but this function remains for future use.
+        }
+
+        // Level up logic
+        function levelUp() {
+            level++;
+            levelDisplay.textContent = level;
+            scoreGoal += 50; // Increase score goal for next level
+            timeLimit += 10; // Increase time limit for next level
+            timeLeft = timeLimit; // Reset time for new level
+            scoreGoalDisplay.textContent = scoreGoal;
+            timerDisplay.textContent = timeLeft;
+
+            // Increase difficulty
+            stair.spacingMin = Math.max(30, stair.spacingMin - 2); // Stairs closer
+            stair.spacingMax = Math.max(70, stair.spacingMax - 2); // Stairs closer
+            stair.widthMin = Math.max(30, stair.widthMin - 1); // Stairs narrower
+            stair.widthMax = Math.max(90, stair.widthMax - 1); // Stairs narrower
+            character.speed += 0.05; // Slightly faster character (influences worldHorizontalMoveSpeed)
+            stair.horizontalSpeed += 0.05; // Stairs auto-move faster
+            // character.gravity += 0.01; // Consider adding for more challenge
+            // character.jumpStrength -= 0.1; // Consider adding for more challenge
+
+            // Re-initialize stairs for the new level's difficulty
+            generateInitialStairs();
+            // Place character on the first stair of the new level
+            const firstStair = stairs[stairs.length - 1];
+            character.x = canvas.width / 2 - character.width / 2; // Keep character centered
+            character.y = firstStair.y - character.height;
+
+            gameRunning = false; // Pause game for level transition
+            showMessage('Level Complete!', `Proceeding to Level ${level}! New Goal: ${scoreGoal} points in ${timeLimit} seconds.`, 'Next Level', startLevel);
+        }
+
+        // Timer countdown
+        function startTimer() {
+            clearInterval(gameInterval); // Clear any existing timer
+            gameInterval = setInterval(() => {
+                if (!gameRunning) {
+                    clearInterval(gameInterval);
+                    return;
+                }
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(gameInterval);
+                    if (score >= scoreGoal) {
+                        // If time runs out but goal is met, it's a win for the level
+                        levelUp();
+                    } else {
+                        endGame(false, `Time's up! You needed ${scoreGoal} points but only got ${score}.`);
+                    }
+                }
+            }, 1000); // Update every second
+        }
+
+        // Show message box
+        function showMessage(title, text, buttonText, buttonAction) {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            messageButton.textContent = buttonText;
+            messageButton.onclick = () => {
+                messageBox.style.display = 'none';
+                buttonAction();
+            };
+            messageBox.style.display = 'flex';
+        }
+
+        // End game (win or lose)
+        function endGame(win, message) {
+            gameRunning = false;
+            gameOver = true;
+            clearInterval(gameInterval); // Stop the timer
+
+            if (win) {
+                showMessage('Congratulations!', message, 'Play Again', resetGame);
+            } else {
+                showMessage('Game Over!', message, 'Try Again', resetGame);
+            }
+        }
+
+        // Reset game to initial state
+        function resetGame() {
+            clearInterval(gameInterval); // Ensure timer is stopped
+            resetGameElementsPosition();
+            draw(); // Draw initial state
+            startButton.textContent = 'Start Game'; // Reset button text
+            startButton.disabled = false;
+            resetButton.disabled = false;
+        }
+
+        // Start a new level (or restart after game over)
+        function startLevel() {
+            gameRunning = true;
+            startButton.textContent = 'Playing...';
+            startButton.disabled = true;
+            startTimer(); // Start the timer for the new level
+            gameLoop();
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Update temporary boost timers (not directly used for this request's boost types, but kept for structure)
+            // updateBoostTimers(); // No temporary boosts in this version, so commenting out
+
+            update();
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event listeners for keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return; // Only process input if game is running
+            if (e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft') {
+                worldHorizontalMoveSpeed = character.speed; // Move world right (character appears to move left)
+            } else if (e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') {
+                worldHorizontalMoveSpeed = -character.speed; // Move world left (character appears to move right)
+            } else if ((e.key === ' ' || e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') && character.jumpCount > 0) {
+                character.dy = character.jumpStrength;
+                character.jumpCount--;
+                character.onGround = false; // Character is in air
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (!gameRunning) return; // Only process input if game is running
+            if (e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft' || e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') {
+                worldHorizontalMoveSpeed = 0; // Stop world horizontal movement
+            }
+        });
+
+        // Mouse click for jump
+        canvas.addEventListener('click', () => {
+            if (gameRunning) {
+                if (character.jumpCount > 0) {
+                    character.dy = character.jumpStrength;
+                    character.jumpCount--;
+                    character.onGround = false;
+                }
+            }
+        });
+
+        // Mobile touch controls
+        leftButton.addEventListener('touchstart', (e) => { if (gameRunning) worldHorizontalMoveSpeed = character.speed; e.preventDefault(); });
+        leftButton.addEventListener('touchend', (e) => { if (gameRunning) worldHorizontalMoveSpeed = 0; e.preventDefault(); });
+        rightButton.addEventListener('touchstart', (e) => { if (gameRunning) worldHorizontalMoveSpeed = -character.speed; e.preventDefault(); });
+        rightButton.addEventListener('touchend', (e) => { if (gameRunning) worldHorizontalMoveSpeed = 0; e.preventDefault(); });
+        jumpButton.addEventListener('touchstart', (e) => {
+            if (gameRunning && character.jumpCount > 0) {
+                character.dy = character.jumpStrength;
+                character.jumpCount--;
+                character.onGround = false;
+            }
+            e.preventDefault(); // Prevent scrolling on touch
+        });
+
+        // Initialize on window load and resize
+        window.onload = () => {
+            setCanvasDimensions(); // Sets up canvas size
+            resetGame(); // Calls resetGameElementsPosition and initial draw
+            // The initial draw is called within resetGame(), which ensures character is drawn
+        };
+
+        window.addEventListener('resize', () => {
+            setCanvasDimensions();
+            resetGameElementsPosition(); // Re-center character and stairs on resize
+            draw(); // Redraw elements after resize
+        });
+
+        // Event listeners for game control buttons
+        startButton.addEventListener('click', startLevel);
+        resetButton.addEventListener('click', resetGame);
+
+    </script>
+</body>
+</html>
